@@ -178,7 +178,6 @@ class AdbTcpService {
 			// sendDummyByte: false,
 			cleanup: true,
 			stayAwake: true,
-			turnScreenOff: true,
 			powerOffOnClose: true,
 			powerOn: false,
 			tunnelForward: true,
@@ -194,15 +193,21 @@ class AdbTcpService {
 			VERSION,
 			options,
 		);
-		try {
-			await client.controller?.setScreenPowerMode(AndroidScreenPowerMode.Off);
-		} catch (error) {
-			console.warn("Failed to turn device screen off", error);
-		}
+		this.scheduleScreenOff(client);
 		return {
 			client,
 			options,
 		};
+	}
+
+	scheduleScreenOff(client) {
+		setTimeout(async () => {
+			try {
+				await client.controller?.setScreenPowerMode(AndroidScreenPowerMode.Off);
+			} catch (error) {
+				console.warn("Failed to turn device screen off", error);
+			}
+		}, 750);
 	}
 
 	async getDeviceAdb(deviceSerial) {
