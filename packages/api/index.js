@@ -50,11 +50,11 @@ const run = async () => {
 						id: req.getQuery("id"),
 						device: req.getQuery("device"),
 						audio: ["true", null, undefined].includes(req.getQuery("audio")),
-						audioCodec: req.getQuery("audioCodec") ?? "raw",
+						audioCodec: req.getQuery("audioCodec") ?? "opus",
 						audioEncoder: req.getQuery("audioEncoder") ?? undefined,
 
 						video: ["true", null, undefined].includes(req.getQuery("video")),
-						videoCodec: req.getQuery("videoCodec") ?? "h264",
+						videoCodec: req.getQuery("videoCodec") ?? "h265",
 						videoEncoder: req.getQuery("videoEncoder") ?? undefined,
 
 						videoBitRate: ![null, undefined].includes(

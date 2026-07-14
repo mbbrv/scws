@@ -8,7 +8,7 @@ export const useAdbStore = defineStore("adb", {
 		devices: [],
 		device: null,
 		display: null,
-		audioEncoder: "off",
+		audioEncoder: null,
 		videoEncoder: null,
 	}),
 	actions: {
@@ -27,6 +27,32 @@ export const useAdbStore = defineStore("adb", {
 			if (deviceInitial?.displays?.length) {
 				displayInitial = deviceInitial.displays[0];
 				this.display = displayInitial.id;
+			}
+			this.ensureDefaultEncoders();
+		},
+		ensureDefaultEncoders() {
+			if (!this.audioEncoders.some((e) => e.id === this.audioEncoder)) {
+				const defaultAudioEncoder =
+					this.audioEncoders.find((e) => e.codec?.toLowerCase() === "opus") ??
+					this.audioEncoders.find((e) => e.codec?.toLowerCase() === "aac") ??
+					this.audioEncoders.find((e) => e.id === "raw") ??
+					this.audioEncoders.find((e) => e.id === "off");
+				this.audioEncoder = defaultAudioEncoder?.id ?? null;
+			}
+
+			if (!this.videoEncoders.some((e) => e.id === this.videoEncoder)) {
+				const defaultVideoEncoder =
+					this.videoEncoders.find(
+						(e) => e.codec?.toLowerCase() === "h265" && e.decoder === "WebCodecs",
+					) ??
+					this.videoEncoders.find(
+						(e) => e.codec?.toLowerCase() === "h264" && e.decoder === "WebCodecs",
+					) ??
+					this.videoEncoders.find(
+						(e) => e.codec?.toLowerCase() === "h264" && e.decoder === "TinyH264",
+					) ??
+					this.videoEncoders.find((e) => e.id === "off");
+				this.videoEncoder = defaultVideoEncoder?.id ?? null;
 			}
 		},
 	},
@@ -88,16 +114,9 @@ export const useAdbStore = defineStore("adb", {
 				}
 			}
 			const result = [
-				{ type: "video", codec: "off", name: "off", decoder: "off" },
+				{ type: "video", id: "off", codec: "off", name: "off", decoder: "off" },
 				...list,
 			];
-
-			const defaultVideoEncoder = result.find(
-				(e) => e.codec === "h264" && e.decoder === "WebCodecs",
-			);
-			if (defaultVideoEncoder) {
-				this.videoEncoder = defaultVideoEncoder.id;
-			}
 
 			return result;
 		},

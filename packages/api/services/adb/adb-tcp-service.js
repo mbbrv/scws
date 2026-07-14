@@ -179,6 +179,7 @@ class AdbTcpService {
 			cleanup: true,
 			stayAwake: true,
 			powerOffOnClose: true,
+			powerOn: false,
 			tunnelForward: true,
 			videoCodecOptions,
 			audioCodecOptions,
