@@ -18,6 +18,7 @@ import {
 	ScrcpyOptionsLatest,
 	ScrcpyOptions2_3,
 	ScrcpyVideoOrientation,
+	AndroidScreenPowerMode,
 } from "@yume-chan/scrcpy";
 
 import {
@@ -190,6 +191,11 @@ class AdbTcpService {
 			VERSION,
 			options,
 		);
+		try {
+			await client.controller?.setScreenPowerMode(AndroidScreenPowerMode.Off);
+		} catch (error) {
+			console.warn("Failed to turn device screen off", error);
+		}
 		return {
 			client,
 			options,
