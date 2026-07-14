@@ -11,6 +11,7 @@ New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
 $env:HOST = '127.0.0.1'
 $env:PORT = '9010'
+$env:ADB_EXE = $adb
 
 Set-Location $workDir
 

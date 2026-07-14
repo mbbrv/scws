@@ -1,6 +1,7 @@
 import * as uWs from "uWebSockets.js";
 import { logger } from "./services/logger.js";
 import { service as adbTcpService } from "./services/adb/adb-tcp-service.js";
+import { service as adbShellService } from "./services/adb/adb-shell-service.js";
 import { Packr, Unpackr } from "msgpackr";
 
 import Response from "./utils/http/response.js";
@@ -267,6 +268,7 @@ const run = async () => {
 					const { id } = ws;
 					const user = global.users.get(id);
 					if (user) {
+						const device = user.ws?.device;
 						if (user.abortController) {
 							try {
 								// user.abortController.abort();
@@ -287,6 +289,14 @@ const run = async () => {
 								logger.error(err);
 							}
 							await user.client.close();
+							if (device) {
+								try {
+									await new Promise((resolve) => setTimeout(resolve, 250));
+									await adbShellService.screenOff(device);
+								} catch (err) {
+									logger.error(err);
+								}
+							}
 						}
 					}
 				} catch (ex) {

@@ -10,7 +10,56 @@ import {
   TMP_DIR,
 } from "./getAppPath.js";
 
+const ADB_EXE = process.env.ADB_EXE || process.env.ADB || "adb";
+
 class AdbShellService {
+  runAdbCommand(commandArgs, label) {
+    const log = {
+      logs: [],
+      errors: [],
+      finished: false,
+    };
+    return new Promise((resolve, reject) => {
+      const child = spawn(ADB_EXE, commandArgs);
+      child.stdout.on("data", (data) => {
+        const msg = data.toString();
+        log.logs.push(msg);
+      });
+      child.stderr.on("data", (data) => {
+        const msg = data.toString();
+        logger.error(msg);
+        log.errors.push(msg);
+      });
+      child.on("error", reject);
+      child.on("exit", (code) => {
+        logger.info(label);
+        log.finished = true;
+        if (code === 0) {
+          resolve(log);
+        } else {
+          reject(log);
+        }
+      });
+    });
+  }
+
+  async screenOff(device = null) {
+    const startArgs = device ? ["-s", device] : [];
+    const commands = [
+      [...startArgs, "shell", "input", "keyevent", "SLEEP"],
+      [...startArgs, "shell", "input", "keyevent", "223"],
+    ];
+    let lastError;
+    for (const commandArgs of commands) {
+      try {
+        return await this.runAdbCommand(commandArgs, "SCREEN OFF FINISHED!");
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError;
+  }
+
   async install(app = "de.heinekingmedia.stashcat.apk", device = null, source) {
     const installArgs = device ? ["-s", device] : [];
     const appPath = getAppPath(source, app);
