@@ -11,6 +11,7 @@ import { global } from "./state/global.js";
 import App from "./utils/http/app.js";
 import { routes } from "./routes/index.js";
 import { cors } from "./utils/http/middie/cors.js";
+import { AndroidScreenPowerMode } from "@yume-chan/scrcpy";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const msgpackOptions = {
@@ -278,6 +279,13 @@ const run = async () => {
 						user.ws = null;
 						global.users.set(id, {});
 						if (user.client) {
+							try {
+								await user.client.controller?.setScreenPowerMode(
+									AndroidScreenPowerMode.Off,
+								);
+							} catch (err) {
+								logger.error(err);
+							}
 							await user.client.close();
 						}
 					}
