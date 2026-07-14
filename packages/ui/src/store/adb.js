@@ -8,7 +8,7 @@ export const useAdbStore = defineStore("adb", {
 		devices: [],
 		device: null,
 		display: null,
-		audioEncoder: "raw",
+		audioEncoder: "off",
 		videoEncoder: null,
 	}),
 	actions: {
@@ -93,7 +93,7 @@ export const useAdbStore = defineStore("adb", {
 			];
 
 			const defaultVideoEncoder = result.find(
-				(e) => e.codec === "h264" && e.decoder === "TinyH264",
+				(e) => e.codec === "h264" && e.decoder === "WebCodecs",
 			);
 			if (defaultVideoEncoder) {
 				this.videoEncoder = defaultVideoEncoder.id;

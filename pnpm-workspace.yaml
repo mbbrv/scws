@@ -1,2 +1,7 @@
 packages:
   - 'packages/**'
+allowBuilds:
+  '@biomejs/biome': true
+  esbuild: true
+  msgpackr-extract: true
+  vue-demi: true

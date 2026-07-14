@@ -114,7 +114,7 @@ class App {
 	 */
 	start() {
 		return new Promise((resolve, reject) => {
-			this.server.listen(this.port, (token) => {
+			this.server.listen(this.host, this.port, (token) => {
 				let message;
 				if (!token) {
 					message = `Server faild to start listening on: ${this.host}:${this.port} ❌`;

@@ -176,6 +176,7 @@ class AdbTcpService {
 			// sendCodecMeta: false,
 			// sendDummyByte: false,
 			cleanup: true,
+			stayAwake: true,
 			tunnelForward: true,
 			videoCodecOptions,
 			audioCodecOptions,
