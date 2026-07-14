@@ -178,6 +178,7 @@ class AdbTcpService {
 			// sendDummyByte: false,
 			cleanup: true,
 			stayAwake: true,
+			turnScreenOff: true,
 			powerOffOnClose: true,
 			powerOn: false,
 			tunnelForward: true,
