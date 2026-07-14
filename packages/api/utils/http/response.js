@@ -6,7 +6,7 @@ import fs from "node:fs";
 import * as cookie from "cookie";
 
 const { contentType } = mime;
-const { createReadStream } = fs;
+const { createReadStream, readFile } = fs;
 
 const Response = function (res, req, route, request) {
 	this.res = res;
@@ -47,8 +47,7 @@ Response.prototype.getProxiedRemoteAddressAsText = function () {
 	return this;
 };
 Response.prototype.getWriteOffset = function () {
-	this.res.getWriteOffset();
-	return this;
+	return this.res.getWriteOffset();
 };
 Response.prototype.onAborted = function (handler) {
 	this.res.onAborted(handler);
@@ -137,6 +136,27 @@ Response.prototype.sendFile = function (
 		end = 0;
 	}
 
+	if (!compressed) {
+		readFile(path, (err, file) => {
+			if (this.aborted) {
+				return;
+			}
+			if (err) {
+				this.cork(() => {
+					this.writeStatus("500 Internal server error");
+					this.end();
+				});
+				return;
+			}
+			const body = end ? file.subarray(start, end + 1) : file;
+			this.setHeader("content-length", body.byteLength);
+			this.cork(() => {
+				this.end(body);
+			});
+		});
+		return this;
+	}
+
 	const stream = end
 		? createReadStream(path, { start, end })
 		: createReadStream(path);
@@ -152,7 +172,9 @@ Response.prototype.sendFile = function (
 };
 
 Response.prototype.pipe = function (stream, size, compressed = false) {
+	let finished = false;
 	this.onAborted(() => {
+		finished = true;
 		if (stream) {
 			stream.destroy();
 		}
@@ -169,20 +191,22 @@ Response.prototype.pipe = function (stream, size, compressed = false) {
 	}
 	if (compressed || !size) {
 		stream.on("data", (buffer) => {
-			if (this.aborted) {
+			if (this.aborted || finished) {
 				stream.destroy();
 				return;
 			}
-			this.write(
-				buffer.buffer.slice(
-					buffer.byteOffset,
-					buffer.byteOffset + buffer.byteLength,
-				),
-			);
+			this.cork(() => {
+				this.write(
+					buffer.buffer.slice(
+						buffer.byteOffset,
+						buffer.byteOffset + buffer.byteLength,
+					),
+				);
+			});
 		});
 	} else {
 		stream.on("data", (chunk) => {
-			if (this.aborted) {
+			if (this.aborted || finished) {
 				stream.destroy();
 				return;
 			}
@@ -193,7 +217,11 @@ Response.prototype.pipe = function (stream, size, compressed = false) {
 			const lastOffset = this.getWriteOffset();
 
 			// First try
-			const [ok, done] = this.tryEnd(ab, size);
+			let ok = false;
+			let done = false;
+			this.cork(() => {
+				[ok, done] = this.tryEnd(ab, size);
+			});
 
 			if (
 				done &&
@@ -201,6 +229,7 @@ Response.prototype.pipe = function (stream, size, compressed = false) {
 				stream.destroy &&
 				typeof stream.destroy === "function"
 			) {
+				finished = true;
 				stream.destroy();
 			} else if (!ok) {
 				// pause because backpressure
@@ -218,6 +247,7 @@ Response.prototype.pipe = function (stream, size, compressed = false) {
 						stream.end &&
 						typeof stream.end === "function"
 					) {
+						finished = true;
 						stream.end();
 					} else if (
 						writeOk &&
@@ -234,16 +264,21 @@ Response.prototype.pipe = function (stream, size, compressed = false) {
 	}
 	stream
 		.on("error", () => {
-			if (!this.aborted) {
-				this.writeStatus("500 Internal server error");
-				this.end();
+			if (!this.aborted && !finished) {
+				this.cork(() => {
+					this.writeStatus("500 Internal server error");
+					this.end();
+				});
 			}
 			stream.destroy();
 		})
 		.on("end", () => {
-			if (!this.aborted) {
+			if (!this.aborted && !finished) {
 				try {
-					this.endOnly();
+					this.cork(() => {
+						finished = true;
+						this.endOnly();
+					});
 				} catch (e) {
 					console.error(e);
 				}
