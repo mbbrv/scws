@@ -1,9 +1,9 @@
-import fastJson from "fast-json-stringify";
-import compress from "./compressor.js";
-import mime from "mime-types";
-import { basename } from "node:path";
 import fs from "node:fs";
+import { basename } from "node:path";
 import * as cookie from "cookie";
+import fastJson from "fast-json-stringify";
+import mime from "mime-types";
+import compress from "./compressor.js";
 
 const { contentType } = mime;
 const { createReadStream, readFile } = fs;
@@ -32,10 +32,19 @@ const Response = function (res, req, route, request) {
 	this._params = null;
 	this._body = null;
 	this._bodyBuffer = null;
+	this._requestContext = [route, request].find(
+		(candidate) => typeof candidate?.addAbortListener === "function",
+	);
 
-	res.onAborted(() => {
-		this.aborted = true;
-	});
+	if (this._requestContext) {
+		this._requestContext.addAbortListener(() => {
+			this.aborted = true;
+		});
+	} else {
+		res.onAborted(() => {
+			this.aborted = true;
+		});
+	}
 };
 
 Response.prototype.getProxiedRemoteAddress = function () {
@@ -50,7 +59,11 @@ Response.prototype.getWriteOffset = function () {
 	return this.res.getWriteOffset();
 };
 Response.prototype.onAborted = function (handler) {
-	this.res.onAborted(handler);
+	if (this._requestContext) {
+		this._requestContext.addAbortListener(handler);
+	} else {
+		this.res.onAborted(handler);
+	}
 	return this;
 };
 Response.prototype.send = function (data) {

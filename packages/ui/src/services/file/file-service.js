@@ -25,6 +25,29 @@ class FileUploadService {
 		});
 	}
 
+  uploadMedia(files, device, { signal, onProgress } = {}) {
+    const formData = new FormData()
+    for (let i = 0; i < files.length; i++) {
+      formData.append(`files[${i}]`, files[i])
+    }
+
+    return apiClient.post(`/${this.#endpoint}/upload-media`, formData, {
+      params: { device },
+      signal,
+      headers: {
+        'Content-Type': undefined,
+      },
+      onUploadProgress: ({ loaded, total, progress }) => {
+        const percentage = Number.isFinite(progress)
+          ? Math.round(progress * 100)
+          : total
+            ? Math.round((loaded * 100) / total)
+            : 0
+        onProgress?.(Math.min(100, Math.max(0, percentage)))
+      },
+    })
+  }
+
 	  getUplaods(params) {
  		const querystring = qs.stringify(params, { encode: false });
 		const url = `/${this.#endpoint}/get-uploads?${querystring}`;

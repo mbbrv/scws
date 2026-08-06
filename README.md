@@ -72,4 +72,26 @@ VITE_BACKEND_WS_URL=ws://localhost:9001
 4. npx vite --force
 UI will start on `http://localhost:3000`
 
+## Upload media to Android
 
+Select a connected device in the UI, open **Upload media**, and choose up to 20
+images, videos, or audio files. The API copies them to the standard Android
+media folders (`Pictures`, `Movies`, or `Music`) and asks Android to refresh its
+media library. It verifies each file's signature and adds a unique suffix to
+the filename so an existing item on the device is never overwritten.
+
+One upload is limited to 94 MiB by default, leaving multipart overhead below
+Cloudflare Free/Pro's 100 MB request cap. Keep these settings aligned when
+changing the limit:
+
+- `MAX_MEDIA_UPLOAD_BYTES` configures the API at runtime (default `98566144`).
+- `VITE_MAX_MEDIA_UPLOAD_MB` configures the UI at build time (default `94`).
+- `MEDIA_UPLOAD_BODY_TIMEOUT_MS` limits receiving one request (default `600000`).
+- `MEDIA_ADB_TIMEOUT_MS` limits each media ADB operation (default `300000`).
+
+The reverse proxy in front of SCWS must also allow the selected request size.
+SCWS processes one media upload at a time to keep memory usage bounded.
+
+The SCWS API does not add application-level authorization to this endpoint.
+When publishing it through Cloudflare, protect the whole application with
+Cloudflare Access and do not expose the origin directly to the internet.

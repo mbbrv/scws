@@ -1,38 +1,114 @@
-import uWS from "uWebSockets.js";
-import * as qs from "qs";
 import * as cookie from "cookie";
+import * as qs from "qs";
+import uWS from "uWebSockets.js";
 
 const Request = function (res, req, route) {
 	this.res = res;
 	this.req = req;
 	this.route = route;
 	this._bodyBuffer = null;
+	this._bodyBufferPromise = null;
 	this._body = null;
-};
+	this.aborted = false;
+	this._abortListeners = new Set();
 
-Request.prototype.getBodyBuffer = function () {
-	if (!this._bodyBuffer) {
-		return new Promise((resolve) => {
-			let buffer;
-			this.res.onData((ab, isLast) => {
-				const curBuf = Buffer.from(ab);
-				buffer = buffer
-					? Buffer.concat([buffer, curBuf])
-					: isLast
-						? curBuf
-						: Buffer.concat([curBuf]);
-				if (isLast) {
-					try {
-						this._bodyBuffer = buffer;
-						resolve(this._bodyBuffer);
-					} catch (e) {
-						resolve(null);
-					}
-				}
-			});
+	if (typeof res.onAborted === "function") {
+		res.onAborted(() => {
+			this.aborted = true;
+			const listeners = [...this._abortListeners];
+			this._abortListeners.clear();
+			for (const listener of listeners) {
+				listener();
+			}
 		});
 	}
-	return this._bodyBuffer;
+};
+
+Request.prototype.addAbortListener = function (handler) {
+	if (this.aborted) {
+		handler();
+		return () => {};
+	}
+
+	this._abortListeners.add(handler);
+	return () => this._abortListeners.delete(handler);
+};
+
+Request.prototype.getBodyBuffer = function (
+	maxBytes = Number.POSITIVE_INFINITY,
+	timeoutMs = 0,
+) {
+	if (this._bodyBuffer) {
+		return this._bodyBuffer;
+	}
+	if (this._bodyBufferPromise) {
+		return this._bodyBufferPromise;
+	}
+
+	this._bodyBufferPromise = new Promise((resolve, reject) => {
+		const chunks = [];
+		let totalBytes = 0;
+		let settled = false;
+		let timeout;
+		let removeAbortListener = () => {};
+		const cleanup = () => {
+			if (timeout) clearTimeout(timeout);
+			removeAbortListener();
+		};
+		const rejectBody = (error) => {
+			if (settled) return;
+			settled = true;
+			cleanup();
+			reject(error);
+		};
+
+		if (timeoutMs > 0) {
+			timeout = setTimeout(() => {
+				const error = new Error(
+					`Request body was not received within ${timeoutMs} ms`,
+				);
+				error.code = "REQUEST_BODY_TIMEOUT";
+				error.statusCode = 408;
+				rejectBody(error);
+			}, timeoutMs);
+		}
+
+		removeAbortListener = this.addAbortListener(() => {
+			const error = new Error("Request was aborted before the body completed");
+			error.code = "REQUEST_ABORTED";
+			rejectBody(error);
+		});
+
+		this.res.onData((ab, isLast) => {
+			if (settled) {
+				return;
+			}
+
+			// uWebSockets.js only guarantees that the ArrayBuffer is valid for the
+			// duration of this callback, so keep an owned copy for later concatenation.
+			const chunk = Buffer.from(new Uint8Array(ab));
+			totalBytes += chunk.byteLength;
+			if (totalBytes > maxBytes) {
+				const error = new Error(
+					`Request body exceeds the ${maxBytes} byte limit`,
+				);
+				error.code = "REQUEST_BODY_TOO_LARGE";
+				error.maxBytes = maxBytes;
+				rejectBody(error);
+				return;
+			}
+
+			chunks.push(chunk);
+			if (isLast) {
+				settled = true;
+				cleanup();
+				this._bodyBuffer = Buffer.concat(chunks, totalBytes);
+				resolve(this._bodyBuffer);
+			}
+		});
+	});
+
+	return this._bodyBufferPromise;
 };
 
 Request.prototype.getBodyJson = (buffer) => {
