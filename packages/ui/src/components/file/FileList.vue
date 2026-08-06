@@ -5,6 +5,7 @@
   import { useToastStore } from '@/store/toast'
   import { adbService } from '@/services/adb/adb-service'
   import FileUpload from './FileUpload'
+  import MediaUpload from './MediaUpload'
 
   const adbStore = useAdbStore()
   const fileStore = useFileStore()
@@ -181,6 +182,22 @@
             </tbody>
           </v-table>
           <FileUpload />
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel elevation="1" value="media-upload">
+        <v-expansion-panel-title>
+          <v-icon size="x-large">
+            {{
+              panels.includes('media-upload')
+                ? 'mdi-cloud-upload'
+                : 'mdi-cloud-upload-outline'
+            }}
+          </v-icon>
+          &nbsp;<v-chip class="ma-2" label>Upload media</v-chip>
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <MediaUpload />
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>

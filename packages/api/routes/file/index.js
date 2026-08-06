@@ -8,6 +8,11 @@ export default [
 		handler: controller.upload,
 	},
 	{
+		method: "post",
+		url: "/api/file/upload-media",
+		handler: controller.uploadMedia,
+	},
+	{
 		method: "get",
 		url: "/api/file/get-uploads",
 		// schema: schema.get,

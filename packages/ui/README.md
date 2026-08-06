@@ -39,6 +39,12 @@ npm run build
 pnpm build
 ```
 
+### Media upload limit
+
+Set `VITE_MAX_MEDIA_UPLOAD_MB` at build time to change the maximum total size
+of one media upload. It defaults to 94 MiB and should match the backend limit.
+The default leaves room for multipart overhead below Cloudflare's 100 MB cap.
+
 ### Customize configuration
 
 See [Configuration Reference](https://vitejs.dev/config/).

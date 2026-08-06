@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development EXPERIMENTAL_FASTCALL=1 nodemon index.js --config nodemon.json",
     "start": "pm2-runtime start pm2.config.cjs",
-    "build-and-start": "cd ../ui && ./patch.sh && pnpm run build && cd ../api && npx @yume-chan/fetch-scrcpy-server 2.6.1 && adb devices && pnpm run start"
+    "build-and-start": "cd ../ui && ./patch.sh && pnpm run build && cd ../api && npx @yume-chan/fetch-scrcpy-server 2.6.1 && adb devices && pnpm run start",
+    "test": "node --test"
   },
   "author": "",
   "license": "ISC",
